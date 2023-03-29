@@ -292,9 +292,13 @@ class NorthlightImport(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
                     obj.vertex_groups[bone_names[bone_map[vertex_bone_index]]].add([vertex_index], vertex_bone_weight, "REPLACE")
 
             mesh_material = materials[i]
+            material = None
             match mesh_material.type:
                 case "standardmaterial":
-                    standardmaterial.create_material(mesh_material.properties, mesh_material.uniforms)
+                    material = standardmaterial.create_material(mesh_material.properties, mesh_material.uniforms)
+
+            if material is not None:
+                obj.data.materials.append(material)
 
             # If the flag for skinning is set, add an armature modifier
             if mesh_material.properties & GlobalFlags.SKINNING_MATRICES:
