@@ -19,6 +19,7 @@
 
 import bpy
 import mathutils
+from .factory import Factory
 
 import enum
 
@@ -32,75 +33,40 @@ class StandardmaterialFlags(enum.IntFlag):
 def create_material(properties, uniforms):
     from ..material import GlobalFlags
 
-    standardmaterial = bpy.data.materials.new("standardmaterial")
-    standardmaterial.use_nodes = True
-
-    nodes = standardmaterial.node_tree.nodes
-    links = standardmaterial.node_tree.links
-
-    shader_root = nodes["Principled BSDF"]
-
     color_map_file = uniforms["g_sColorMap"]
     color_multiplier = uniforms["g_vColorMultiplier"]
 
-    color_map_node = nodes.new("ShaderNodeTexImage")
-    color_map_image = bpy.data.images.new(color_map_file, 32, 32)
-    color_map_image.source = "FILE"
-    color_map_node.image = color_map_image
-    color_map_node.location = mathutils.Vector((-750, 300))
+    f = Factory("standardmaterial")
+    color_map = f.add_input_image("g_sColorMap", color_map_file)
+    color_multiplier = f.add_input_rgba("g_vColorMultiplier", color_multiplier)
+    color_multiply = f.add_multiply(0)
 
-    color_multiplier_math_node = nodes.new("ShaderNodeVectorMath")
-    color_multiplier_math_node.operation = "MULTIPLY"
-    color_multiplier_math_node.location = mathutils.Vector((-450, 150))
-
-    color_multiplier_value_node = nodes.new("ShaderNodeRGB")
-    color_multiplier_value_node.outputs[0].default_value = color_multiplier
-    color_multiplier_value_node.location = mathutils.Vector((-750, 0))
-
-    links.new(color_map_node.outputs["Color"], color_multiplier_math_node.inputs[0])
-    links.new(color_multiplier_value_node.outputs["Color"], color_multiplier_math_node.inputs[1])
-    links.new(color_multiplier_math_node.outputs["Vector"], shader_root.inputs["Base Color"])
+    f.add_link(color_map, color_multiply, "Color", 0)
+    f.add_link(color_multiplier, color_multiply, "Color", 1)
+    f.add_output_link(color_multiply, "Vector", "Base Color")
 
     if properties & GlobalFlags.ALPHA_TEST_SAMPLER:
+        f.new_block()
         alpha_map_file = uniforms["g_sAlphaTestSampler"]
-        alpha_map_image = bpy.data.images.new(alpha_map_file, 32, 32)
-        alpha_map_image.source = "FILE"
 
-        alpha_map_node = nodes.new("ShaderNodeTexImage")
-        alpha_map_node.image = alpha_map_image
-        alpha_map_node.location = mathutils.Vector((-750, -1000))
-
-        links.new(alpha_map_node.outputs["Alpha"], shader_root.inputs["Alpha"])
+        alpha_map = f.add_input_image("g_sAlphaTestSampler", alpha_map_file)
+        f.add_output_link(alpha_map, "Alpha", "Alpha")
 
     if properties & StandardmaterialFlags.SPECULAR_MAP:
+        f.new_block()
         specular_map_file = uniforms["g_sSpecularMap"]
         specular_multiplier = uniforms["g_vSpecularMultiplier"]
-        glossiness_factor = uniforms["g_fGlossiness"]
+        glossiness_factor = uniforms["g_fGlossiness"][0]
 
-        specular_map_image = bpy.data.images.new(specular_map_file, 32, 32)
-        specular_map_image.source = "FILE"
+        specular_map = f.add_input_image("g_sSpecularMap", specular_map_file)
+        specular_multiplier = f.add_input_rgb("g_vSpecularMultiplier", specular_multiplier)
+        glossiness_factor = f.add_input_value("g_fGlossiness", glossiness_factor)
 
-        specular_map_node = nodes.new("ShaderNodeTexImage")
-        specular_map_node.image = specular_map_image
-        specular_map_node.location = mathutils.Vector((-750, -300))
+        specular_multiply = f.add_multiply(0)
 
-        specular_multiplier_node = nodes.new("ShaderNodeRGB")
-        specular_multiplier_node.outputs[0].default_value = specular_multiplier + (1.0,)
-        specular_multiplier_node.location = mathutils.Vector((-750, -600))
+        f.add_link(specular_map, specular_multiply, "Color", 0)
+        f.add_link(specular_multiplier, specular_multiply, "Color", 1)
+        f.add_output_link(specular_multiply, "Vector", "Specular")
+        f.add_output_link(glossiness_factor, "Value", "Metallic")
 
-        specular_multiplier_math_node = nodes.new("ShaderNodeVectorMath")
-        specular_multiplier_math_node.operation = "MULTIPLY"
-        specular_multiplier_math_node.location = mathutils.Vector((-450, -450))
-
-        specular_rgb_to_bw_node = nodes.new("ShaderNodeRGBToBW")
-        specular_rgb_to_bw_node.location = mathutils.Vector((-300, -450))
-
-        glossiness_node = nodes.new("ShaderNodeValue")
-        glossiness_node.outputs[0].default_value = glossiness_factor[0]
-        glossiness_node.location = mathutils.Vector((-750, -800))
-
-        links.new(specular_map_node.outputs["Color"], specular_multiplier_math_node.inputs[0])
-        links.new(specular_multiplier_node.outputs["Color"], specular_multiplier_math_node.inputs[1])
-        links.new(specular_multiplier_math_node.outputs["Vector"], specular_rgb_to_bw_node.inputs["Color"])
-        links.new(specular_rgb_to_bw_node.outputs["Val"], shader_root.inputs["Specular"])
-        links.new(glossiness_node.outputs["Value"], shader_root.inputs["Metallic"])
+    return f.material
