@@ -30,13 +30,13 @@ class StandardmaterialFlags(enum.IntFlag):
     SPECULAR_MAP = 0x00000004
 
 
-def create_material(properties, uniforms):
+def create_material(properties, uniforms, name="standardmaterial"):
     from ..material import GlobalFlags
 
     color_map_file = uniforms["g_sColorMap"]
     color_multiplier = uniforms["g_vColorMultiplier"]
 
-    f = Factory("standardmaterial")
+    f = Factory(name)
     color_map = f.add_input_image("g_sColorMap", color_map_file)
     color_multiplier = f.add_input_rgba("g_vColorMultiplier", color_multiplier)
     color_multiply = f.add_multiply(0)
