@@ -80,7 +80,7 @@ def read_data(f, data_type):
             data = unpack('HH', f.read(4))
             data = (
                 data[0] / 4096.0,
-                data[1] / 4096.0)
+                1.0 - (data[1] / 4096.0))
         case DataType.VEC4BF:
             data = unpack('BBBB', f.read(4))
             data = (
