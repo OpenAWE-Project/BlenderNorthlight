@@ -103,6 +103,8 @@ class NorthlightImport(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
 
     filename_ext = ".binmsh"
 
+    filter_glob: bpy.props.StringProperty(default='*.binmsh;*.binfbx', options={"HIDDEN"})
+
     def execute(self, context):
         f = open(self.filepath, 'rb')
 
