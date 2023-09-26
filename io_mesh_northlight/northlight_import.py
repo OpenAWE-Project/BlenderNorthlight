@@ -385,10 +385,10 @@ class NorthlightImport(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
                     uv_layer.data[j * 3 + 1].uv = uv_layers[0][indices[1]]
                     uv_layer.data[j * 3 + 2].uv = uv_layers[0][indices[2]]
 
-            if version < 43:
-                # Create vertex groups for bones
-                for bone_index in bone_map:
-                    obj.vertex_groups.new(name=bone_names[bone_index])
+
+            # Create vertex groups for bones
+            for bone_index in bone_map:
+                obj.vertex_groups.new(name=bone_names[bone_index])
 
             # Create the vertex groups with weight for skinning
             for vertex_index, vertex_bone_indices, vertex_bone_weights in zip(range(len(mesh_bone_indices)), mesh_bone_indices, mesh_bone_weights):
