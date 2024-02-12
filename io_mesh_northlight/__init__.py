@@ -21,7 +21,7 @@ import bpy
 
 from bpy.utils import register_class, unregister_class
 
-from . import northlight_import
+from . import northlight_binmsh_import
 
 bl_info = {
     "name": "Northlight Import",

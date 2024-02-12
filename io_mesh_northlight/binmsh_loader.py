@@ -17,18 +17,11 @@
 # You should have received a copy of the GNU General Public License
 # along with OpenAWE. If not, see <http://www.gnu.org/licenses/>.
 
-import bpy
-import bpy_extras
-
-import enum
+import os
 import io
-import os.path
+import enum
 import dataclasses
-
 from struct import unpack
-
-from .material import GlobalFlags
-from .material import standardmaterial
 
 
 class ComponentType(enum.Enum):
@@ -57,58 +50,60 @@ class Material:
     uniforms: dict
 
 
-def read_string(f):
-    string_length = unpack('I', f.read(4))[0]
-    string = unpack('<' + str(string_length) + 's', f.read(string_length))[0].decode("ascii")
+@dataclasses.dataclass
+class Mesh:
+    lod: int
+    positions: []
+    faces: []
+    bone_ids: []
+    bone_weights: []
+    bone_map: []
+    uv_layers: []
+    material: Material
+
+
+def read_string(binmsh):
+    string_length = unpack('I', binmsh.read(4))[0]
+    string = unpack('<' + str(string_length) + 's', binmsh.read(string_length))[0].decode("ascii")
     string = string.replace("\x00", "")
     return string
 
 
-def read_data(f, data_type):
+def read_data(binmsh, data_type):
     data = None
     match data_type:
         case DataType.VEC3F:
-            data = unpack('fff', f.read(12))
+            data = unpack('fff', binmsh.read(12))
         case DataType.VEC4S:
-            data = unpack('HHHH', f.read(8))
+            data = unpack('HHHH', binmsh.read(8))
             data = (
                 data[0] / 65535.0,
                 data[1] / 65535.0,
                 data[2] / 65535.0,
                 data[3] / 65535.0)
         case DataType.VEC2S:
-            data = unpack('HH', f.read(4))
+            data = unpack('HH', binmsh.read(4))
             data = (
                 data[0] / 4096.0,
                 1.0 - (data[1] / 4096.0))
         case DataType.VEC4BF:
-            data = unpack('BBBB', f.read(4))
+            data = unpack('BBBB', binmsh.read(4))
             data = (
                 data[0] / 255.0,
                 data[1] / 255.0,
                 data[2] / 255.0,
                 data[3] / 255.0)
         case DataType.VEC4BI:
-            data = unpack('bbbb', f.read(4))
+            data = unpack('bbbb', binmsh.read(4))
         case DataType.VEC4SI:
-            data = unpack('hhhh', f.read(8))
+            data = unpack('hhhh', binmsh.read(8))
 
     return data
 
 
-class NorthlightImport(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
-    bl_idname = "northlight.import"
-    bl_label = "Import Northlight mesh file"
-    bl_description = "Import Northlight mesh file"
-
-    filename_ext = ".binmsh"
-
-    filter_glob: bpy.props.StringProperty(default='*.binmsh;*.binfbx', options={"HIDDEN"})
-
-    def execute(self, context):
-        f = open(self.filepath, 'rb')
-
-        version = unpack('I', f.read(4))[0]
+class BINMSH:
+    def __init__(self, binmsh):
+        version = unpack('I', binmsh.read(4))[0]
         match version:
             case 19:
                 print("Alan Wake Mesh")
@@ -120,100 +115,100 @@ class NorthlightImport(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
                 raise Exception("Invalid or unsupported mesh version")
 
         if version >= 43:
-            secondary_buffer_size = unpack('I', f.read(4))[0]
+            secondary_buffer_size = unpack('I', binmsh.read(4))[0]
 
-        vertex_buffer_size = unpack('I', f.read(4))[0]
-        indices_count = unpack('I', f.read(4))[0]
-        indices_type = unpack('I', f.read(4))[0]
-        flags = unpack('I', f.read(4))[0]
+        vertex_buffer_size = unpack('I', binmsh.read(4))[0]
+        indices_count = unpack('I', binmsh.read(4))[0]
+        indices_type = unpack('I', binmsh.read(4))[0]
+        flags = unpack('I', binmsh.read(4))[0]
 
         secondary_buffer = None
         if version >= 43:
-            secondary_buffer = io.BytesIO(f.read(secondary_buffer_size))
+            secondary_buffer = io.BytesIO(binmsh.read(secondary_buffer_size))
 
-        vertex_buffer = io.BytesIO(f.read(vertex_buffer_size))
-        index_buffer = io.BytesIO(f.read(indices_count * indices_type))
+        vertex_buffer = io.BytesIO(binmsh.read(vertex_buffer_size))
+        index_buffer = io.BytesIO(binmsh.read(indices_count * indices_type))
 
-        bone_count = unpack('I', f.read(4))[0]
-        bone_names = []
+        self.bone_names = []
+        bone_count = unpack('I', binmsh.read(4))[0]
         for i in range(bone_count):
-            bone_name = read_string(f)
-            bone_names.append(bone_name)
+            bone_name = read_string(binmsh)
+            self.bone_names.append(bone_name)
 
             print(bone_name)
-            
+
             # Inverse rest matrix + Bounding sphere for bone
-            f.seek(16*4, 1)
+            binmsh.seek(16 * 4, 1)
 
             # Unknown value
             if version >= 43:
-                f.seek(4, 1)
+                binmsh.seek(4, 1)
 
         if version >= 43:
-            f.seek(16, 1)  # Unknown
+            binmsh.seek(16, 1)  # Unknown
 
-            num_unks = unpack('I', f.read(4))[0]
-            unks = unpack(str(num_unks) + 'f', f.read(num_unks * 4))
+            num_unks = unpack('I', binmsh.read(4))[0]
+            unks = unpack(str(num_unks) + 'f', binmsh.read(num_unks * 4))
 
-            unk = unpack('f', f.read(4))[0]
+            unk = unpack('f', binmsh.read(4))[0]
 
-        f.seek(4*4, 1)  # Global Bounding sphere
-        f.seek(6*4, 1)  # Global Bounding Box
+        binmsh.seek(4 * 4, 1)  # Global Bounding sphere
+        binmsh.seek(6 * 4, 1)  # Global Bounding Box
 
-        lod_count = unpack('I', f.read(4))[0]
+        lod_count = unpack('I', binmsh.read(4))[0]
 
         materials = []
-        material_count = unpack('I', f.read(4))[0]
+        material_count = unpack('I', binmsh.read(4))[0]
         print(material_count)
         for i in range(material_count):
             if version >= 43:
-                f.seek(4, 1)  # Unknown (Always 4?)
+                binmsh.seek(4, 1)  # Unknown (Always 4?)
 
             if version >= 20:
-                material_name = read_string(f)
+                material_name = read_string(binmsh)
                 print("Material Name: %s" % material_name)
             else:
                 material_name = ""
 
-            shader_name = read_string(f)
+            shader_name = read_string(binmsh)
 
             # Source file
             if version >= 43:
-                source_file = read_string(f)
+                source_file = read_string(binmsh)
                 print("Source File: %s" % source_file)
 
-                num_unks = unpack('I', f.read(4))[0]
-                f.seek(num_unks * 8, 1)
+                num_unks = unpack('I', binmsh.read(4))[0]
+                binmsh.seek(num_unks * 8, 1)
 
-            properties = unpack('I', f.read(4))[0]
-            blend_mode = unpack('I', f.read(4))[0]
-            cull_mode = unpack('I', f.read(4))[0]
-            material_flags = unpack('I', f.read(4))[0]
+            properties = unpack('I', binmsh.read(4))[0]
+            blend_mode = unpack('I', binmsh.read(4))[0]
+            cull_mode = unpack('I', binmsh.read(4))[0]
+            material_flags = unpack('I', binmsh.read(4))[0]
 
             if version >= 43:
-                f.seek(4, 1)
+                binmsh.seek(4, 1)
 
-            num_attributes = unpack('I', f.read(4))[0]
+            num_attributes = unpack('I', binmsh.read(4))[0]
             uniforms = {}
             for i in range(num_attributes):
-                attribute_name = read_string(f)
-                data_type = unpack('I', f.read(4))[0]
+                attribute_name = read_string(binmsh)
+                data_type = unpack('I', binmsh.read(4))[0]
 
                 match data_type:
                     case 0:  # Float
-                        data = unpack('f', f.read(4))
+                        data = unpack('f', binmsh.read(4))
                     case 1:  # Vec2
-                        data = unpack('ff', f.read(8))
+                        data = unpack('ff', binmsh.read(8))
                     case 2:  # Vec3
-                        data = unpack('fff', f.read(12))
+                        data = unpack('fff', binmsh.read(12))
                     case 3:  # Vec4
-                        data = unpack('ffff', f.read(16))
+                        data = unpack('ffff', binmsh.read(16))
                     case 7 | 9:  # Texture
-                        data = read_string(f)
+                        data = read_string(binmsh)
                     case 8:  # Sampler type
                         data = None
                     case 12:  # Bool
-                        data = unpack('I', f.read(4))[0] != 0
+                        data = unpack('I', binmsh.read(4))[0] != 0
                     case _:
                         raise Exception("Invalid data type for {}".format(attribute_name))
 
@@ -231,61 +226,57 @@ class NorthlightImport(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
 
         if version >= 43:
             # Unknown data table
-            num_unks = unpack('I', f.read(4))[0]
-            f.seek(num_unks * 4, 1)
+            num_unks = unpack('I', binmsh.read(4))[0]
+            binmsh.seek(num_unks * 4, 1)
 
-            f.seek(4, 1)
+            binmsh.seek(4, 1)
 
             # Another unknown data table
-            num_unks = unpack('I', f.read(4))[0]
-            f.seek(num_unks * 4, 1)
+            num_unks = unpack('I', binmsh.read(4))[0]
+            binmsh.seek(num_unks * 4, 1)
 
         # Create the root object
-        name = os.path.basename(self.filepath)
-        root_mesh = bpy.data.meshes.new(name)
-        root_object = bpy.data.objects.new(name, root_mesh)
+        name = os.path.basename("mesh")
 
-        mesh_count = unpack('I', f.read(4))[0]
+        mesh_count = unpack('I', binmsh.read(4))[0]
+        self.meshs = []
         for i in range(mesh_count):
             uv_count = 0
 
-            lod = unpack('I', f.read(4))[0]
-            vertex_count = unpack('I', f.read(4))[0]
-            face_count = unpack('I', f.read(4))[0]
+            lod = unpack('I', binmsh.read(4))[0]
+            vertex_count = unpack('I', binmsh.read(4))[0]
+            face_count = unpack('I', binmsh.read(4))[0]
 
             if version >= 43:
-                secondary_vertex_offset = unpack('I', f.read(4))[0]
+                secondary_vertex_offset = unpack('I', binmsh.read(4))[0]
 
-            vertex_offset = unpack('I', f.read(4))[0]
-            face_offset = unpack('I', f.read(4))[0]
-            f.seek(4, 1)
+            vertex_offset = unpack('I', binmsh.read(4))[0]
+            face_offset = unpack('I', binmsh.read(4))[0]
+            binmsh.seek(4, 1)
 
             assert lod < lod_count
-            
-            mesh = bpy.data.meshes.new("mesh" + str(i) + ".lod" + str(lod))
-            obj = bpy.data.objects.new("mesh" + str(i) + ".lod" + str(lod), mesh)
 
             if version == 21:
-                f.seek(16, 1)
+                binmsh.seek(16, 1)
 
             if version >= 43:
-                f.seek(4 * 4, 1)
-                f.seek(6 * 4, 1)
-                f.seek(4, 1)
+                binmsh.seek(4 * 4, 1)
+                binmsh.seek(6 * 4, 1)
+                binmsh.seek(4, 1)
 
             vertex_attributes = []
-            vertex_attribute_count = unpack('B', f.read(1))[0]
+            vertex_attribute_count = unpack('B', binmsh.read(1))[0]
             for j in range(vertex_attribute_count):
                 different_buffer = False
                 if version >= 43:
-                    different_buffer = unpack("B", f.read(1))[0] == 1
+                    different_buffer = unpack("B", binmsh.read(1))[0] == 1
                 else:
-                    f.seek(1, 1)  # Unknown
-                component_type = unpack('B', f.read(1))[0]
-                data_type = unpack('B', f.read(1))[0]
+                    binmsh.seek(1, 1)  # Unknown
+                component_type = unpack('B', binmsh.read(1))[0]
+                data_type = unpack('B', binmsh.read(1))[0]
 
                 if version >= 43:
-                    f.seek(1, 1)
+                    binmsh.seek(1, 1)
 
                 match component_type:
                     case 2:
@@ -324,14 +315,14 @@ class NorthlightImport(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
                 print((component_type, data_type, different_buffer))
 
             if version >= 43:
-                f.seek(13, 1)
+                binmsh.seek(13, 1)
 
                 # Identity bone map since all games >=Quantum Break use the bone indices directly
                 # TODO: Make sure, that only the bones used in this part mesh are used
                 bone_map = range(bone_count)
             else:
-                bone_map_count = unpack('I', f.read(4))[0]
-                bone_map = unpack(str(bone_map_count) + 'B', f.read(bone_map_count))
+                bone_map_count = unpack('I', binmsh.read(4))[0]
+                bone_map = unpack(str(bone_map_count) + 'B', binmsh.read(bone_map_count))
 
             mesh_indices = []
             mesh_positions = []
@@ -373,56 +364,14 @@ class NorthlightImport(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
                         case ComponentType.BONE_WEIGHT:
                             mesh_bone_weights.append(data)
 
-            # Create the meshs basic geometry
-            mesh.from_pydata(mesh_positions, [], mesh_indices)
-
-            # Create the uv layers
-            for k in range(uv_count):
-                uv_layer = mesh.uv_layers.new()
-                for j in range(len(mesh_indices)):
-                    indices = mesh_indices[j]
-                    uv_layer.data[j * 3].uv = uv_layers[0][indices[0]]
-                    uv_layer.data[j * 3 + 1].uv = uv_layers[0][indices[1]]
-                    uv_layer.data[j * 3 + 2].uv = uv_layers[0][indices[2]]
-
-
-            # Create vertex groups for bones
-            for bone_index in bone_map:
-                obj.vertex_groups.new(name=bone_names[bone_index])
-
-            # Create the vertex groups with weight for skinning
-            for vertex_index, vertex_bone_indices, vertex_bone_weights in zip(range(len(mesh_bone_indices)), mesh_bone_indices, mesh_bone_weights):
-                for vertex_bone_index, vertex_bone_weight in zip(vertex_bone_indices, vertex_bone_weights):
-
-                    if vertex_bone_weight == 0:
-                        continue
-
-                    obj.vertex_groups[bone_names[bone_map[vertex_bone_index]]].add(
-                        [vertex_index],
-                        vertex_bone_weight,
-                        "REPLACE"
-                    )
-
-            mesh_material = materials[i % material_count]
-            material = None
-            match mesh_material.type:
-                case "standardmaterial":
-                    material = standardmaterial.create_material(
-                        mesh_material.properties,
-                        mesh_material.uniforms,
-                        mesh_material.name
-                    )
-
-            if material is not None:
-                obj.data.materials.append(material)
-
-            # If the flag for skinning is set, add an armature modifier
-            if mesh_material.properties & GlobalFlags.SKINNING_MATRICES:
-                armature_modifier = obj.modifiers.new("skin", "ARMATURE")
-                armature_modifier.use_bone_envelopes = False
-                armature_modifier.use_vertex_groups = True
-
-            bpy.context.scene.collection.objects.link(obj)
-
-        return {'FINISHED'}
-
+            mesh = Mesh(
+                lod,
+                mesh_positions,
+                mesh_indices,
+                mesh_bone_indices,
+                mesh_bone_weights,
+                bone_map,
+                uv_layers,
+                materials[i % material_count]
+            )
+            self.meshs.append(mesh)
