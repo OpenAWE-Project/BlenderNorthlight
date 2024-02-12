@@ -27,7 +27,7 @@ bl_info = {
     "name": "Northlight Import",
     "author": "Patrick Dworski <nostritius@googlemail.com>",
     "version": (1, 0, 0),
-    "blender": (3, 1, 0),
+    "blender": (4, 0, 0),
     "location": "File -> Import",
     "description": "Import Northlight engine mesh files",
     "warning": "",

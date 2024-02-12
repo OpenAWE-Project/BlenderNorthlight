@@ -66,7 +66,7 @@ def create_material(properties, uniforms, name="standardmaterial"):
 
         f.add_link(specular_map, specular_multiply, "Color", 0)
         f.add_link(specular_multiplier, specular_multiply, "Color", 1)
-        f.add_output_link(specular_multiply, "Vector", "Specular")
+        f.add_output_link(specular_multiply, "Vector", "Tint")
         f.add_output_link(glossiness_factor, "Value", "Metallic")
 
     return f.material
