@@ -35,12 +35,12 @@ bl_info = {
 }
 
 classes = [
-    northlight_import.NorthlightImport
+    northlight_binmsh_import.NorthlightImport
 ]
 
 
 def menu_func_northlight_import(self, context):
-    self.layout.operator(northlight_import.NorthlightImport.bl_idname, text="Northlight (.binmsh, .binfbx)")
+    self.layout.operator(northlight_binmsh_import.NorthlightImport.bl_idname, text="Northlight (.binmsh, .binfbx)")
 
 
 def register():
