@@ -13,6 +13,11 @@ License. It currently supports the mesh files from the following games with the 
 | Quantum Break                 |   43    |   x    |        |
 | Control                       |   46    |        |        |
 
+Requirements
+------------
+
+The plugin needs at least blender 4.0
+
 Legal Disclaimer
 ----------------
 
