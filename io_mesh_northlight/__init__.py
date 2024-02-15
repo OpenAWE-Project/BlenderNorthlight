@@ -22,6 +22,7 @@ import bpy
 from bpy.utils import register_class, unregister_class
 
 from . import northlight_binmsh_import
+from . import northlight_binfol_import
 
 bl_info = {
     "name": "Northlight Import",
@@ -29,30 +30,38 @@ bl_info = {
     "version": (1, 0, 0),
     "blender": (4, 0, 0),
     "location": "File -> Import",
-    "description": "Import Northlight engine mesh files",
+    "description": "Import Northlight engine file formats",
     "warning": "",
     "category": "Import-Export",
 }
 
 classes = [
-    northlight_binmsh_import.NorthlightImport
+    northlight_binmsh_import.NorthlightImport,
+    northlight_binfol_import.NorthlightFoliageImport
 ]
 
 
 def menu_func_northlight_import(self, context):
-    self.layout.operator(northlight_binmsh_import.NorthlightImport.bl_idname, text="Northlight (.binmsh, .binfbx)")
+    self.layout.operator(northlight_binmsh_import.NorthlightImport.bl_idname, text="Northlight Mesh (.binmsh, .binfbx)")
+
+
+def menu_func_northlight_foliage_import(self, context):
+    self.layout.operator(northlight_binfol_import.NorthlightFoliageImport.bl_idname, text="Northlight Foliage (.binfol)")
 
 
 def register():
     for c in classes:
+        print(c)
         register_class(c)
     bpy.types.TOPBAR_MT_file_import.append(menu_func_northlight_import)
+    bpy.types.TOPBAR_MT_file_import.append(menu_func_northlight_foliage_import)
 
 
 def unregister():
     for c in classes:
         unregister_class(c)
     bpy.types.TOPBAR_MT_file_import.remove(menu_func_northlight_import)
+    bpy.types.TOPBAR_MT_file_import.remove(menu_func_northlight_foliage_import)
 
 
 if __name__ == '__main__':
