@@ -20,11 +20,9 @@
 import bpy
 import bpy_extras
 
-from .material import GlobalFlags
-from .material import standardmaterial
-
 from .binmsh_loader import BINMSH
 
+from .util import *
 
 class NorthlightImport(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
     bl_idname = "northlight.import"
@@ -42,58 +40,21 @@ class NorthlightImport(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
 
         bone_names = binmsh.bone_names
 
-        for m in binmsh.meshs:
-            mesh = bpy.data.meshes.new("mesh.lod" + str(m.lod))
-            obj = bpy.data.objects.new("mesh.lod" + str(m.lod), mesh)
+        for i, m in zip(range(len(binmsh.meshs)), binmsh.meshs):
+            mesh = bpy.data.meshes.new("mesh{}.lod{}".format(i, m.lod))
+            obj = bpy.data.objects.new("mesh{}.lod{}".format(i, m.lod), mesh)
 
             # Create the meshs basic geometry
             mesh.from_pydata(m.positions, [], m.faces)
 
             # Create the uv layers
-            for uv in m.uv_layers:
-                uv_layer = mesh.uv_layers.new()
-                for j in range(len(m.faces)):
-                    indices = m.faces[j]
-                    uv_layer.data[j * 3].uv = uv[indices[0]]
-                    uv_layer.data[j * 3 + 1].uv = uv[indices[1]]
-                    uv_layer.data[j * 3 + 2].uv = uv[indices[2]]
-
+            add_uv_layers(mesh, m.faces, m.uv_layers)
 
             # Create vertex groups for bones
-            for bone_index in m.bone_map:
-                obj.vertex_groups.new(name=bone_names[bone_index])
+            add_bone_data(obj, m.bone_map, bone_names, m.bone_ids, m.bone_weights)
 
-            # Create the vertex groups with weight for skinning
-            for vertex_index, vertex_bone_indices, vertex_bone_weights in zip(range(len(m.bone_ids)), m.bone_ids, m.bone_weights):
-                for vertex_bone_index, vertex_bone_weight in zip(vertex_bone_indices, vertex_bone_weights):
-
-                    if vertex_bone_weight == 0:
-                        continue
-
-                    obj.vertex_groups[bone_names[m.bone_map[vertex_bone_index]]].add(
-                        [vertex_index],
-                        vertex_bone_weight,
-                        "REPLACE"
-                    )
-
-            mesh_material = m.material
-            material = None
-            match mesh_material.type:
-                case "standardmaterial":
-                    material = standardmaterial.create_material(
-                        mesh_material.properties,
-                        mesh_material.uniforms,
-                        mesh_material.name
-                    )
-
-            if material is not None:
-                obj.data.materials.append(material)
-
-            # If the flag for skinning is set, add an armature modifier
-            if mesh_material.properties & GlobalFlags.SKINNING_MATRICES:
-                armature_modifier = obj.modifiers.new("skin", "ARMATURE")
-                armature_modifier.use_bone_envelopes = False
-                armature_modifier.use_vertex_groups = True
+            # Create material for object
+            add_material(obj, m.material)
 
             bpy.context.scene.collection.objects.link(obj)
 
