@@ -59,6 +59,7 @@ class Mesh:
     bone_weights: []
     bone_map: []
     uv_layers: []
+    vertex_colors: []
     material: Material
 
 
@@ -242,6 +243,7 @@ class BINMSH:
         self.meshs = []
         for i in range(mesh_count):
             uv_count = 0
+            color_count = 0
 
             lod = unpack('I', binmsh.read(4))[0]
             vertex_count = unpack('I', binmsh.read(4))[0]
@@ -283,6 +285,7 @@ class BINMSH:
                         component_type = ComponentType.POSITION
                     case 4:
                         component_type = ComponentType.COLOR
+                        color_count += 1
                     case 5:
                         if data_type == 5:
                             component_type = ComponentType.BONE_INDEX
@@ -328,6 +331,9 @@ class BINMSH:
             mesh_positions = []
             mesh_bone_indices = []
             mesh_bone_weights = []
+            mesh_colors = []
+            for j in range(color_count):
+                mesh_colors.append([])
 
             index_buffer.seek(face_offset * indices_type)
             for j in range(face_count):
@@ -343,6 +349,7 @@ class BINMSH:
             vertex_buffer.seek(vertex_offset)
             for j in range(vertex_count):
                 current_uv = 0
+                current_color = 0
                 for attribute in vertex_attributes:
                     different_buffer = attribute[2]
                     data_type = attribute[1]
@@ -363,6 +370,9 @@ class BINMSH:
                             mesh_bone_indices.append(data)
                         case ComponentType.BONE_WEIGHT:
                             mesh_bone_weights.append(data)
+                        case ComponentType.COLOR:
+                            mesh_colors[current_color].append(data)
+                            current_color += 1
 
             mesh = Mesh(
                 lod,
@@ -372,6 +382,7 @@ class BINMSH:
                 mesh_bone_weights,
                 bone_map,
                 uv_layers,
+                mesh_colors,
                 materials[i % material_count]
             )
             self.meshs.append(mesh)

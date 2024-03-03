@@ -33,6 +33,17 @@ def add_uv_layers(mesh, faces, uv_layers):
             uv_layer.data[j * 3 + 2].uv = uv[indices[2]]
 
 
+def add_vertex_colors(mesh, faces, colors):
+    # Create the vertex color
+    for color in colors:
+        vertex_color = mesh.vertex_colors.new()
+        for j in range(len(faces)):
+            indices = faces[j]
+            vertex_color.data[j * 3].color = color[indices[0]]
+            vertex_color.data[j * 3 + 1].color = color[indices[1]]
+            vertex_color.data[j * 3 + 2].color = color[indices[2]]
+
+
 def add_bone_data(obj, bone_map, bone_names, bone_ids, bone_weights):
     # Create vertex groups for bones
     for bone_index in bone_map:

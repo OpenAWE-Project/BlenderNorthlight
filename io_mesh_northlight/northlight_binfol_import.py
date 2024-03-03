@@ -69,6 +69,9 @@ class NorthlightFoliageImport(bpy.types.Operator, bpy_extras.io_utils.ImportHelp
             # Create the uv layers
             add_uv_layers(mesh, m.faces, m.uv_layers)
 
+            # Create the color layers
+            add_vertex_colors(mesh, m.faces, m.vertex_colors)
+
             # Create vertex groups for bones
             add_bone_data(obj, m.bone_map, bone_names, m.bone_ids, m.bone_weights)
 
