@@ -29,8 +29,6 @@ from struct import unpack
 
 from .material import GlobalFlags
 from .material import standardmaterial
-from .material import character
-from .material import light
 
 from .binmsh_loader import BINMSH
 
