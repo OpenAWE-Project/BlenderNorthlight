@@ -25,7 +25,7 @@ from .binmsh_loader import BINMSH
 from .util import *
 
 class NorthlightImport(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
-    bl_idname = "northlight.import"
+    bl_idname = "northlight.binmsh_import"
     bl_label = "Import Northlight mesh file"
     bl_description = "Import Northlight mesh file"
 

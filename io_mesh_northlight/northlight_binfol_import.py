@@ -36,7 +36,7 @@ from .util import *
 
 
 class NorthlightFoliageImport(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
-    bl_idname = "northlight.import"
+    bl_idname = "northlight.binfol_import"
     bl_label = "Import Northlight foliage mesh file"
     bl_description = "Import Northlight foliage mesh file"
 
