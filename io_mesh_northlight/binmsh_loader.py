@@ -309,7 +309,7 @@ class BINMSH:
                     case 3 | 4 | 6:
                         data_type = DataType.VEC4BF
                     case 5:
-                        if version >= 43:
+                        if version >= 43 and component_type == ComponentType.BONE_INDEX:
                             data_type = DataType.VEC4SI
                         else:
                             data_type = DataType.VEC4BI
