@@ -16,7 +16,7 @@ License. It currently supports the mesh files from the following games with the 
 Requirements
 ------------
 
-The plugin needs at least blender 4.0
+The plugin needs at least blender 4.2
 
 Legal Disclaimer
 ----------------
