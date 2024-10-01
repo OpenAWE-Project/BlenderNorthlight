@@ -1,0 +1,18 @@
+schema_version = "1.0.0"
+
+id = "io_mesh_northlight"
+name = "Northlight Import"
+maintainer = "Patrick Dworski <nostritius@googlemail.com>"
+version = "1.0.0"
+blender_version_min = "4.2.0"
+tagline = "Import Northlight engine file formats"
+tags = ["Import-Export"]
+
+type = "add-on"
+
+license = [
+  "SPDX:GPL-3.0-or-later"
+]
+
+[permissions]
+files = "Import northlight files"

@@ -24,17 +24,6 @@ from bpy.utils import register_class, unregister_class
 from . import northlight_binmsh_import
 from . import northlight_binfol_import
 
-bl_info = {
-    "name": "Northlight Import",
-    "author": "Patrick Dworski <nostritius@googlemail.com>",
-    "version": (1, 0, 0),
-    "blender": (4, 0, 0),
-    "location": "File -> Import",
-    "description": "Import Northlight engine file formats",
-    "warning": "",
-    "category": "Import-Export",
-}
-
 classes = [
     northlight_binmsh_import.NorthlightImport,
     northlight_binfol_import.NorthlightFoliageImport
