@@ -23,10 +23,12 @@ from bpy.utils import register_class, unregister_class
 
 from . import northlight_binmsh_import
 from . import northlight_binfol_import
+from . import northlight_skel_import
 
 classes = [
     northlight_binmsh_import.NorthlightImport,
-    northlight_binfol_import.NorthlightFoliageImport
+    northlight_binfol_import.NorthlightFoliageImport,
+    northlight_skel_import.NorthlightSkelImport
 ]
 
 
@@ -37,6 +39,9 @@ def menu_func_northlight_import(self, context):
 def menu_func_northlight_foliage_import(self, context):
     self.layout.operator(northlight_binfol_import.NorthlightFoliageImport.bl_idname, text="Northlight Foliage (.binfol)")
 
+def menu_func_northlight_skel_import(self, context):
+    self.layout.operator(northlight_skel_import.NorthlightSkelImport.bl_idname, text="Northlight Skeleton (.skel)")
+
 
 def register():
     for c in classes:
@@ -44,6 +49,7 @@ def register():
         register_class(c)
     bpy.types.TOPBAR_MT_file_import.append(menu_func_northlight_import)
     bpy.types.TOPBAR_MT_file_import.append(menu_func_northlight_foliage_import)
+    bpy.types.TOPBAR_MT_file_import.append(menu_func_northlight_skel_import)
 
 
 def unregister():
@@ -51,6 +57,7 @@ def unregister():
         unregister_class(c)
     bpy.types.TOPBAR_MT_file_import.remove(menu_func_northlight_import)
     bpy.types.TOPBAR_MT_file_import.remove(menu_func_northlight_foliage_import)
+    bpy.types.TOPBAR_MT_file_import.append(menu_func_northlight_skel_import)
 
 
 if __name__ == '__main__':
